@@ -11,19 +11,19 @@ class Program
             return;
         }
 
+        System.IO.Directory.CreateDirectory("InputVideos");
+        System.IO.Directory.CreateDirectory("OutputVideos");
+
+
         BatchLoader BL = new BatchLoader(VideoAmount);
         BL.Start();
     }
 }
 
-
-//get list of videos in folder
-
-//start x ffmpeg process with first elements of the list
-
-//loop until list is empty
-
-// exit
+//TO DO: chose input and output folder location
+//       main program remains open during child process wait
+//       param customization
+//       clean the code
 
 
 

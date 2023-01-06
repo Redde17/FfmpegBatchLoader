@@ -5,7 +5,6 @@ namespace FfmpegBatchLoader
 {
     public class Video
     {
-        
         public string Path { get; set; }
         public string Name { get; set; }
         public string Status { get; set; }
@@ -35,30 +34,30 @@ namespace FfmpegBatchLoader
 
             Console.WriteLine();
 
-
+            //manage the ffmpeg instances for a set maximum at a time
             Video vd;
-            for (int i = 0; i < waitingList.Length; i++)
+            while(videoStack.Count > 0)
             {
-                vd = videoStack.Pop();
-                Console.WriteLine($"Processing: {vd.Path}");
-                waitingList[i] = LaunchFfmpegInstance(vd.Path, vd.Name);
-            }
-
-            while (videoStack.Count != 0)
-            {
-                Thread.Sleep(500);
-                for (int i = 0; i < waitingList.Length; i++)
+                for(int i = 0; i < waitingList.Length; i++)
                 {
-                    if (waitingList[i].HasExited)
+                    if (waitingList[i] == null || waitingList[i].HasExited)
                     {
-                        if (videoStack.Count == 0)
-                            break;
-
                         vd = videoStack.Pop();
                         Console.WriteLine($"Processing: {vd.Path}");
                         waitingList[i] = LaunchFfmpegInstance(vd.Path, vd.Name);
                     }
+
+                    if (videoStack.Count == 0)
+                        break;
                 }
+                Thread.Sleep(500);
+            }
+
+            //wait for all process to end
+            foreach(var process in waitingList)
+            {
+                if(process != null)
+                    process.WaitForExit();
             }
 
             Console.WriteLine("Done");
@@ -66,7 +65,7 @@ namespace FfmpegBatchLoader
 
         public void PrintVideoList()
         {
-            Console.WriteLine("Video in processo:");
+            Console.WriteLine("Videos to process:");
             foreach (Video video in videoStack)
                 Console.WriteLine("{0,-10}", video.Path); //da sistemare 
         }
