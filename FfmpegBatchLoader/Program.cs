@@ -21,7 +21,6 @@ class Program
 }
 
 //TO DO: chose input and output folder location
-//       main program remains open during child process wait
 //       param customization
 //       clean the code
 
