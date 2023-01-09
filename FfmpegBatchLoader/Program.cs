@@ -23,6 +23,7 @@ class Program
 //TO DO: chose input and output folder location
 //       param customization
 //       clean the code
+//       folder for batch process
 
 
 

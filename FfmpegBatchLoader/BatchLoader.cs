@@ -32,6 +32,10 @@ namespace FfmpegBatchLoader
             InitiateVideoList();
             PrintVideoList();
 
+            string batchFolder = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-ffff");
+
+            System.IO.Directory.CreateDirectory($"OutputVideos\\{batchFolder}");
+
             Console.WriteLine();
 
             //manage the ffmpeg instances for a set maximum at a time
@@ -44,7 +48,7 @@ namespace FfmpegBatchLoader
                     {
                         vd = videoStack.Pop();
                         Console.WriteLine($"Processing: {vd.Path}");
-                        waitingList[i] = LaunchFfmpegInstance(vd.Path, vd.Name);
+                        waitingList[i] = LaunchFfmpegInstance(vd.Path, vd.Name, batchFolder);
                     }
 
                     if (videoStack.Count == 0)
@@ -55,10 +59,9 @@ namespace FfmpegBatchLoader
 
             //wait for all process to end
             foreach(var process in waitingList)
-            {
                 if(process != null)
                     process.WaitForExit();
-            }
+
 
             Console.WriteLine("Done");
         }
@@ -78,12 +81,12 @@ namespace FfmpegBatchLoader
                 videoStack.Push(new Video(file, Path.GetFileNameWithoutExtension(file)));
         }
 
-        private Process LaunchFfmpegInstance(string path, string name)
+        private Process LaunchFfmpegInstance(string path, string name, string folder)
         {
-            string Args = $"-i \"{path}\" -map 0 -c:v copy \"OutputVideos\\{name}.mp4\" -y";
+            string Args = $"-i \"{path}\" -map 0 -c:v copy \"OutputVideos\\{folder}\\{name}.mp4\" -y";
 
             ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.CreateNoWindow = true; 
+            startInfo.CreateNoWindow = false; 
             startInfo.UseShellExecute = false;
             startInfo.FileName = "ffmpeg.exe";
             startInfo.WindowStyle = ProcessWindowStyle.Normal;
