@@ -21,34 +21,68 @@ namespace FfmpegBatchLoader
     {
         Process[] waitingList;
         Stack<Video> videoStack;
+        Settings settings;
 
-        public BatchLoader(int videoAmount)
+        public BatchLoader(Settings settings)
         {
-            waitingList = new Process[videoAmount];
+            waitingList = new Process[settings.VideoAmount];
             videoStack= new Stack<Video>();
+            this.settings = settings;
         }
+
         public void Start()
         {
             InitiateVideoList();
             PrintVideoList();
 
+            //create sub folder for the batch process
             string batchFolder = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-ffff");
-
-            System.IO.Directory.CreateDirectory($"OutputVideos\\{batchFolder}");
-
-            Console.WriteLine();
+            System.IO.Directory.CreateDirectory($@"{settings.OutputFolder}\{batchFolder}");
 
             //manage the ffmpeg instances for a set maximum at a time
+            StartProcessing(batchFolder);
+
+            //wait for all process to end
+            WaitAll();
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("\nDone");
+            Console.ResetColor();
+        }
+
+        public void PrintVideoList()
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Videos to process:");
+            Console.ResetColor();
+            foreach (Video video in videoStack)
+                Console.WriteLine("\t{0,-10}", video.Path); //da sistemare 
+        }
+
+        //==========PRIVATE==========//
+        private void WaitAll()
+        {
+            foreach (var process in waitingList)
+                if (process != null)
+                    process.WaitForExit();
+        }
+
+        private void StartProcessing(string batchFolder)
+        {
+            
             Video vd;
-            while(videoStack.Count > 0)
+            while (videoStack.Count > 0)
             {
-                for(int i = 0; i < waitingList.Length; i++)
+                for (int i = 0; i < waitingList.Length; i++)
                 {
                     if (waitingList[i] == null || waitingList[i].HasExited)
                     {
-                        vd = videoStack.Pop();
-                        Console.WriteLine($"Processing: {vd.Path}");
+                        vd = videoStack.Pop();          
                         waitingList[i] = LaunchFfmpegInstance(vd.Path, vd.Name, batchFolder);
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Write($"\nProcessing: ");
+                        Console.ResetColor();
+                        Console.Write($"{vd.Path} - {waitingList[i].StartTime}\n\n");
                     }
 
                     if (videoStack.Count == 0)
@@ -56,38 +90,23 @@ namespace FfmpegBatchLoader
                 }
                 Thread.Sleep(500);
             }
-
-            //wait for all process to end
-            foreach(var process in waitingList)
-                if(process != null)
-                    process.WaitForExit();
-
-
-            Console.WriteLine("Done");
         }
-
-        public void PrintVideoList()
-        {
-            Console.WriteLine("Videos to process:");
-            foreach (Video video in videoStack)
-                Console.WriteLine("{0,-10}", video.Path); //da sistemare 
-        }
-
-        //==========PRIVATE==========//
 
         private void InitiateVideoList()
         {
-            foreach (string file in Directory.GetFiles(@"InputVideos", "*.mkv"))
+            foreach (string file in Directory.GetFiles($@"{settings.InputFolder}", "*.mkv"))
                 videoStack.Push(new Video(file, Path.GetFileNameWithoutExtension(file)));
         }
 
         private Process LaunchFfmpegInstance(string path, string name, string folder)
         {
-            string Args = $"-i \"{path}\" -map 0 -c:v copy \"OutputVideos\\{folder}\\{name}.mp4\" -y";
+            string Args = $"-i \"{path}\" -map 0 -c:v copy \"{settings.OutputFolder}\\{folder}\\{name}.mp4\" -y";
+            if (!settings.ShowFfmpegInAnotherWindow)
+                Args = Args + " -loglevel error -stats";
 
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.CreateNoWindow = false; 
-            startInfo.UseShellExecute = false;
+            startInfo.UseShellExecute = settings.ShowFfmpegInAnotherWindow;
             startInfo.FileName = "ffmpeg.exe";
             startInfo.WindowStyle = ProcessWindowStyle.Normal;
             startInfo.Arguments = Args;
